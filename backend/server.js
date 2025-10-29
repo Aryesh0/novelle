@@ -14,29 +14,31 @@ const paymentRoutes = require('./routes/payment');
 const bookRoutes = require('./routes/books');
 const reviewRoutes = require('./routes/reviews');
 const userBookRoutes = require('./routes/userbooks');
-
 dotenv.config();
 
 const app = express();
 
-// ==================== CORS CONFIG ====================
-// Allow both localhost and your live Vercel domain
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://novelle-dmmhwgara-aryeshs-projects-7881d6ee.vercel.app/',           // CHANGE THIS TO YOUR ACTUAL VERCEL URL
-  // Optional: Allow all Vercel preview deployments
-  // /^https:\/\/.*\.vercel\.app$/
+  'https://novelle-dmmhwgara-aryeshs-projects-7881d6ee.vercel.app', // Your main domain
+  /^https:\/\/novelle-.*\.vercel\.app$/ // Allows ALL preview deployments
 ];
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
+    // Allow requests with no origin (mobile, Postman, curl)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin) || allowedOrigins.some(o => o instanceof RegExp && o.test(origin))) {
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (typeof allowed === 'string') return allowed === origin;
+      if (allowed instanceof RegExp) return allowed.test(origin);
+      return false;
+    });
+
+    if (isAllowed) {
       callback(null, true);
     } else {
-      console.warn(`CORS blocked origin: ${origin}`);
+      console.warn(`CORS BLOCKED: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
