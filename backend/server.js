@@ -23,7 +23,7 @@ const app = express();
 // Allow both localhost and your live Vercel domain
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://novelle.vercel.app',           // CHANGE THIS TO YOUR ACTUAL VERCEL URL
+  'https://novelle-brown.vercel.app',           // CHANGE THIS TO YOUR ACTUAL VERCEL URL
   // Optional: Allow all Vercel preview deployments
   // /^https:\/\/.*\.vercel\.app$/
 ];
