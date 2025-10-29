@@ -19,11 +19,31 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
+// ==================== CORS CONFIG ====================
+// Allow both localhost and your live Vercel domain
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://novelle.vercel.app',           // CHANGE THIS TO YOUR ACTUAL VERCEL URL
+  // Optional: Allow all Vercel preview deployments
+  // /^https:\/\/.*\.vercel\.app$/
+];
+
 app.use(cors({
-    origin: 'http://localhost:3000',
-    credentials: true
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin) || allowedOrigins.some(o => o instanceof RegExp && o.test(origin))) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
 }));
+// =====================================================
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -39,11 +59,11 @@ mongoose.connect(MONGODB_URI, {
     useUnifiedTopology: true,
     maxPoolSize: 10
 })
-.then(() => console.log('✓ MongoDB Connected Successfully'))
-.catch(err => console.error('✗ MongoDB Connection Error:', err));
+.then(() => console.log('MongoDB Connected Successfully'))
+.catch(err => console.error('MongoDB Connection Error:', err));
 
 // JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-novelle-2025'; // FIXED: Consistent default
+const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-novelle-2025';
 
 // Helper Functions
 function validateBase64Image(base64String) {
@@ -88,7 +108,7 @@ app.use('/api/books', bookRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/user-books', userBookRoutes);
 
-// Register Route - FIXED: Simplified payload, consistent secret
+// Register Route
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { fullname, email, username, password, rating } = req.body;
@@ -124,7 +144,6 @@ app.post('/api/auth/register', async (req, res) => {
 
         await newUser.save();
 
-        // FIXED: Sign ONLY with { userId } to match auth.js
         const token = jwt.sign(
             { userId: newUser._id },
             JWT_SECRET,
@@ -158,7 +177,7 @@ app.post('/api/auth/register', async (req, res) => {
     }
 });
 
-// Login Route - FIXED: Simplified payload, consistent secret
+// Login Route
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -188,14 +207,12 @@ app.post('/api/auth/login', async (req, res) => {
             });
         }
 
-        // Check if subscription has expired
         if (user.isPremium && user.subscriptionEndDate < new Date()) {
             user.isPremium = false;
             user.subscriptionStatus = 'expired';
             await user.save();
         }
 
-        // FIXED: Sign ONLY with { userId } to match auth.js
         const token = jwt.sign(
             { userId: user._id },
             JWT_SECRET,
@@ -241,7 +258,6 @@ app.get('/api/user/profile', authenticateToken, async (req, res) => {
             });
         }
 
-        // Check if subscription has expired
         if (user.isPremium && user.subscriptionEndDate < new Date()) {
             user.isPremium = false;
             user.subscriptionStatus = 'expired';
@@ -285,7 +301,7 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
                 });
             }
             user.bio = bio;
-            console.log('✓ Bio updated');
+            console.log('Bio updated');
         }
 
         if (profilePicture !== undefined && profilePicture !== user.profilePicture) {
@@ -293,7 +309,7 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
             const validation = validateBase64Image(profilePicture);
             
             if (!validation.valid) {
-                console.error('✗ Profile picture validation failed:', validation.error);
+                console.error('Profile picture validation failed:', validation.error);
                 return res.status(400).json({
                     success: false,
                     message: validation.error
@@ -301,7 +317,7 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
             }
             
             user.profilePicture = profilePicture;
-            console.log(`✓ Profile picture updated (${validation.size?.toFixed(2)}MB)`);
+            console.log(`Profile picture updated (${validation.size?.toFixed(2)}MB)`);
         }
 
         if (headerImage !== undefined && headerImage !== user.headerImage) {
@@ -309,7 +325,7 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
             const validation = validateBase64Image(headerImage);
             
             if (!validation.valid) {
-                console.error('✗ Header image validation failed:', validation.error);
+                console.error('Header image validation failed:', validation.error);
                 return res.status(400).json({
                     success: false,
                     message: validation.error
@@ -317,7 +333,7 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
             }
             
             user.headerImage = headerImage;
-            console.log(`✓ Header image updated (${validation.size?.toFixed(2)}MB)`);
+            console.log(`Header image updated (${validation.size?.toFixed(2)}MB)`);
         }
 
         const docSize = JSON.stringify(user.toObject()).length / (1024 * 1024);
@@ -332,7 +348,7 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
 
         console.log('Saving to MongoDB...');
         await user.save();
-        console.log('✓ Profile saved successfully');
+        console.log('Profile saved successfully');
 
         res.status(200).json({
             success: true,
@@ -352,7 +368,7 @@ app.put('/api/user/profile', authenticateToken, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('✗ Profile update error:', error);
+        console.error('Profile update error:', error);
         
         if (error.code === 11000) {
             return res.status(400).json({ 
@@ -413,11 +429,11 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log('=================================');
-    console.log(`✓ Server running on http://localhost:${PORT}`);
-    console.log(`✓ MongoDB URI: ${MONGODB_URI}`);
-    console.log('✓ Max request size: 50MB');
-    console.log('✓ CORS enabled for: http://localhost:3000');
-    console.log('✓ Razorpay Integration: Active');
-    console.log('✓ Google Books API: Active');
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`MongoDB URI: ${MONGODB_URI}`);
+    console.log(`Max request size: 50MB`);
+    console.log(`CORS enabled for: ${allowedOrigins.join(', ')}`);
+    console.log(`Razorpay Integration: Active`);
+    console.log(`Google Books API: Active`);
     console.log('=================================');
 });
