@@ -58,8 +58,8 @@ export default function PremiumModal({ isOpen, onClose, onSuccess }) {
         return;
       }
 
-      // Create order
-      const orderResponse = await fetch('https://novelle-dmmhwgara-aryeshs-projects-7881d6ee.vercel.app//api/payment/create-order', {
+      // Create order - FIXED: Use REACT_APP_API_URL for any Vercel preview
+      const orderResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/payment/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -88,8 +88,8 @@ export default function PremiumModal({ isOpen, onClose, onSuccess }) {
         order_id: orderData.order.id,
         handler: async function (response) {
           try {
-            // Verify payment
-            const verifyResponse = await fetch('https://novelle-gyeamg83z-aryeshs-projects-7881d6ee.vercel.app/api/payment/verify-payment', {
+            // Verify payment - FIXED: Use REACT_APP_API_URL for any Vercel preview
+            const verifyResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/payment/verify-payment`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -240,7 +240,7 @@ export default function PremiumModal({ isOpen, onClose, onSuccess }) {
           <button
             onClick={handleSubscribe}
             disabled={loading}
-            className="w-full py-4 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 text-white rounded-xl font-bold text-lg hover:shadow-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+            className="w-100 py-4 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 text-white rounded-xl font-bold text-lg hover:shadow-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
           >
             {loading ? (
               <>
