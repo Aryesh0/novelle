@@ -59,7 +59,7 @@ export default function PremiumModal({ isOpen, onClose, onSuccess }) {
       }
 
       // Create order
-      const orderResponse = await fetch('http://localhost:5000/api/payment/create-order', {
+      const orderResponse = await fetch('https://novelle-gyeamg83z-aryeshs-projects-7881d6ee.vercel.app/api/payment/create-order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -89,7 +89,7 @@ export default function PremiumModal({ isOpen, onClose, onSuccess }) {
         handler: async function (response) {
           try {
             // Verify payment
-            const verifyResponse = await fetch('http://localhost:5000/api/payment/verify-payment', {
+            const verifyResponse = await fetch('https://novelle-gyeamg83z-aryeshs-projects-7881d6ee.vercel.app/api/payment/verify-payment', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
