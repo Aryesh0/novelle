@@ -276,6 +276,9 @@
 
     <script>
         $(document).ready(function() {
+            // FIXED: Set API URL for production (Render backend)
+            const API_URL = 'https://novelle-backend.onrender.com';
+
             // Password Strength Indicator
             $('#password').on('input', function() {
                 const password = $(this).val();
@@ -364,13 +367,13 @@
                     1: 'Rarely reads',
                     2: 'Occasional reader',
                     3: 'Regular reader',
-                    4: 'Avid reader',
+                    3: 'Avid reader',
                     5: 'Bookworm!'
                 };
                 $('#ratingText').text(texts[rating] || '');
             }
 
-            // Form Submission
+            // Form Submission - FIXED: Use API_URL, better error handling
             $('#registrationForm').on('submit', function(e) {
                 e.preventDefault();
 
@@ -384,16 +387,23 @@
                 };
 
                 console.log('Registration Data:', formData);
+                console.log('Using API URL:', API_URL); // DEBUG: Log API URL
 
-                // Send to backend
-                fetch('http://localhost:5000/api/auth/register', {
+                // Send to backend - FIXED: Use API_URL
+                fetch(`${API_URL}/api/auth/register`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(formData)
                 })
-                .then(response => response.json())
+                .then(response => {
+                    console.log('Response status:', response.status); // DEBUG: Log status
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         // Store user data
@@ -408,12 +418,12 @@
                             window.location.href = '/?page=profile';
                         }, 2000);
                     } else {
-                        alert('Registration failed: ' + data.message);
+                        alert('Registration failed: ' + (data.message || 'Unknown error'));
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Error connecting to server. Please try again.');
+                    alert('Error connecting to server. Please try again. (Check console for details)');
                 });
             });
         });

@@ -20,6 +20,7 @@ export default function NovellHomepage({ onNavigate }) {
     { name: "Romance", count: "11.3k", color: "from-red-400 to-orange-400" }
   ];
 
+  // Load user from localStorage on mount
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
@@ -31,18 +32,25 @@ export default function NovellHomepage({ onNavigate }) {
     fetchFeaturedBooks();
   }, []);
 
+  // Fetch featured books from backend (which pulls from Google Books API)
   const fetchFeaturedBooks = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/books/featured?limit=8');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/books/featured?limit=8`);
+      console.log('Featured books fetch URL:', `${process.env.REACT_APP_API_URL}/api/books/featured?limit=8`);
+      console.log('Featured response status:', response.status);
+      
       const data = await response.json();
       if (data.success) {
-        setFeaturedBooks(data.books);
+        setFeaturedBooks(data.books || []);
+      } else {
+        console.warn('Featured books failed:', data.message);
       }
     } catch (error) {
       console.error('Error fetching featured books:', error);
     }
   };
 
+  // Search books
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -50,10 +58,13 @@ export default function NovellHomepage({ onNavigate }) {
     setLoading(true);
     setSelectedGenre(null);
     try {
-      const response = await fetch(`http://localhost:5000/api/books/search?query=${encodeURIComponent(searchQuery)}&limit=20`);
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/api/books/search?query=${encodeURIComponent(searchQuery)}&limit=20`
+      );
+      console.log('Search response status:', response.status);
       const data = await response.json();
       if (data.success) {
-        setGenreBooks(data.books);
+        setGenreBooks(data.books || []);
       }
     } catch (error) {
       console.error('Error searching books:', error);
@@ -62,15 +73,19 @@ export default function NovellHomepage({ onNavigate }) {
     }
   };
 
+  // Fetch books by genre
   const handleGenreClick = async (genreName) => {
     setLoading(true);
     setSelectedGenre(genreName);
     setSearchQuery('');
     try {
-      const response = await fetch(`http://localhost:5000/api/books/genre/${encodeURIComponent(genreName)}?limit=20`);
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/api/books/genre/${encodeURIComponent(genreName)}?limit=20`
+      );
+      console.log('Genre response status:', response.status);
       const data = await response.json();
       if (data.success) {
-        setGenreBooks(data.books);
+        setGenreBooks(data.books || []);
       }
     } catch (error) {
       console.error('Error fetching genre books:', error);
@@ -79,37 +94,46 @@ export default function NovellHomepage({ onNavigate }) {
     }
   };
 
+  // Clear search/genre filter
   const clearFilter = () => {
     setSelectedGenre(null);
     setGenreBooks([]);
     setSearchQuery('');
   };
 
+  // Logout user
   const handleLogout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     setUser(null);
     setShowDropdown(false);
+    onNavigate && onNavigate('home');
   };
 
+  // Premium success
   const handlePremiumSuccess = (updatedUser) => {
     setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
     setShowPremiumModal(false);
   };
 
+  // Navigate to book detail
   const handleBookClick = (bookId) => {
     onNavigate && onNavigate('bookDetail', bookId);
   };
 
+  // Render star rating
   const renderStars = (rating) => {
+    const fullStars = Math.floor(rating || 0);
     return [...Array(5)].map((_, i) => (
       <Star
         key={i}
-        className={`w-4 h-4 ${i < Math.floor(rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+        className={`w-4 h-4 ${i < fullStars ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
       />
     ));
   };
 
+  // Render individual book card
   const renderBookCard = (book) => (
     <div
       key={book._id}
@@ -122,6 +146,7 @@ export default function NovellHomepage({ onNavigate }) {
             src={book.thumbnail || book.coverImage}
             alt={book.title}
             className="w-full h-full object-cover"
+            loading="lazy"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-200 to-pink-200">
@@ -161,13 +186,18 @@ export default function NovellHomepage({ onNavigate }) {
       <nav className="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2 cursor-pointer" onClick={() => { clearFilter(); onNavigate && onNavigate('home'); }}>
+            {/* Logo */}
+            <div 
+              className="flex items-center space-x-2 cursor-pointer" 
+              onClick={() => { clearFilter(); onNavigate && onNavigate('home'); }}
+            >
               <Book className="w-8 h-8 text-orange-500" />
               <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-blue-500 bg-clip-text text-transparent">
                 Novelle
               </span>
             </div>
             
+            {/* Desktop Nav Links */}
             <div className="hidden md:flex items-center space-x-8">
               <button onClick={() => clearFilter()} className="text-gray-700 hover:text-orange-500 transition">Home</button>
               <button onClick={() => onNavigate && onNavigate('browse')} className="text-gray-700 hover:text-orange-500 transition">Browse</button>
@@ -175,9 +205,11 @@ export default function NovellHomepage({ onNavigate }) {
               <button onClick={() => onNavigate && onNavigate('myBooks')} className="text-gray-700 hover:text-orange-500 transition">My Books</button>
             </div>
 
+            {/* Desktop User Section */}
             <div className="hidden md:flex items-center space-x-4">
               {user ? (
                 <>
+                  {/* Premium Button */}
                   {!user.isPremium ? (
                     <button
                       onClick={() => setShowPremiumModal(true)}
@@ -193,6 +225,7 @@ export default function NovellHomepage({ onNavigate }) {
                     </div>
                   )}
 
+                  {/* User Dropdown */}
                   <div className="relative">
                     <button
                       onClick={() => setShowDropdown(!showDropdown)}
@@ -206,10 +239,10 @@ export default function NovellHomepage({ onNavigate }) {
                         />
                       ) : (
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-pink-400 flex items-center justify-center text-white font-bold">
-                          {user.fullname?.charAt(0).toUpperCase()}
+                          {user.fullname?.charAt(0).toUpperCase() || 'U'}
                         </div>
                       )}
-                      <span className="font-semibold text-gray-700">@{user.username}</span>
+                      <span className="font-semibold text-gray-700 hidden sm:inline">@{user.username}</span>
                       <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
@@ -217,10 +250,7 @@ export default function NovellHomepage({ onNavigate }) {
                     
                     {showDropdown && (
                       <>
-                        <div 
-                          className="fixed inset-0 z-40" 
-                          onClick={() => setShowDropdown(false)}
-                        />
+                        <div className="fixed inset-0 z-40" onClick={() => setShowDropdown(false)} />
                         <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50">
                           <div className="px-4 py-3 border-b border-gray-100">
                             <p className="text-sm font-semibold text-gray-900">{user.fullname}</p>
@@ -287,26 +317,28 @@ export default function NovellHomepage({ onNavigate }) {
               )}
             </div>
 
+            {/* Mobile Menu Toggle */}
             <button className="md:hidden" onClick={() => setMenuOpen(!menuOpen)}>
               {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
 
+        {/* Mobile Menu */}
         {menuOpen && (
           <div className="md:hidden bg-white border-t">
             <div className="px-4 py-3 space-y-3">
-              <button onClick={() => clearFilter()} className="block w-full text-left text-gray-700 hover:text-orange-500">Home</button>
-              <button onClick={() => onNavigate && onNavigate('browse')} className="block w-full text-left text-gray-700 hover:text-orange-500">Browse</button>
-              <button onClick={() => onNavigate && onNavigate('community')} className="block w-full text-left text-gray-700 hover:text-orange-500">Community</button>
-              <button onClick={() => onNavigate && onNavigate('myBooks')} className="block w-full text-left text-gray-700 hover:text-orange-500">My Books</button>
+              <button onClick={() => { clearFilter(); setMenuOpen(false); }} className="block w-full text-left text-gray-700 hover:text-orange-500">Home</button>
+              <button onClick={() => { onNavigate && onNavigate('browse'); setMenuOpen(false); }} className="block w-full text-left text-gray-700 hover:text-orange-500">Browse</button>
+              <button onClick={() => { onNavigate && onNavigate('community'); setMenuOpen(false); }} className="block w-full text-left text-gray-700 hover:text-orange-500">Community</button>
+              <button onClick={() => { onNavigate && onNavigate('myBooks'); setMenuOpen(false); }} className="block w-full text-left text-gray-700 hover:text-orange-500">My Books</button>
               
               {user ? (
                 <>
                   {!user.isPremium && (
                     <button 
                       className="w-full px-4 py-2 bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 text-white rounded-full font-bold flex items-center justify-center space-x-2"
-                      onClick={() => setShowPremiumModal(true)}
+                      onClick={() => { setShowPremiumModal(true); setMenuOpen(false); }}
                     >
                       <Crown className="w-4 h-4" />
                       <span>Upgrade to Premium</span>
@@ -314,13 +346,13 @@ export default function NovellHomepage({ onNavigate }) {
                   )}
                   <button 
                     className="w-full px-4 py-2 bg-orange-500 text-white rounded-full flex items-center justify-center space-x-2"
-                    onClick={() => onNavigate && onNavigate('profile')}
+                    onClick={() => { onNavigate && onNavigate('profile'); setMenuOpen(false); }}
                   >
                     <span>@{user.username}</span>
                   </button>
                   <button 
                     className="w-full px-4 py-2 text-red-600 border border-red-300 rounded-full"
-                    onClick={handleLogout}
+                    onClick={() => { handleLogout(); setMenuOpen(false); }}
                   >
                     Logout
                   </button>
@@ -329,13 +361,13 @@ export default function NovellHomepage({ onNavigate }) {
                 <>
                   <button 
                     className="w-full px-4 py-2 text-gray-700 border border-gray-300 rounded-full"
-                    onClick={() => onNavigate && onNavigate('login')}
+                    onClick={() => { onNavigate && onNavigate('login'); setMenuOpen(false); }}
                   >
                     Login
                   </button>
                   <button 
                     className="w-full px-4 py-2 bg-gradient-to-r from-orange-500 to-blue-500 text-white rounded-full"
-                    onClick={() => window.location.href = '/register.html'}
+                    onClick={() => { window.location.href = '/register.html'; setMenuOpen(false); }}
                   >
                     Sign Up
                   </button>
@@ -414,7 +446,7 @@ export default function NovellHomepage({ onNavigate }) {
         </div>
       </div>
 
-      {/* Genre Books or Featured Books */}
+      {/* Books Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {selectedGenre || searchQuery ? (
           <>
@@ -525,7 +557,7 @@ export default function NovellHomepage({ onNavigate }) {
             </div>
 
             <div>
-              <p className="text-gray-700 text-sm">&copy; 2025 Novelle, Inc.</p>
+              <p className="text-gray-700 text-sm">© 2025 Novelle, Inc.</p>
             </div>
           </div>
         </div>

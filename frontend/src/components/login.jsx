@@ -26,13 +26,16 @@ export default function LoginForm({ onNavigate, setUserId }) {
     setSuccess('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData)
       });
+
+      console.log('Login API URL:', `${process.env.REACT_APP_API_URL}/api/auth/login`);
+      console.log('Login response status:', response.status); // DEBUG
 
       const data = await response.json();
 
@@ -43,9 +46,9 @@ export default function LoginForm({ onNavigate, setUserId }) {
         localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('token', data.token);
         
-        // Set user ID for profile
+        // Set user ID for profile (MongoDB uses _id)
         if (setUserId) {
-          setUserId(data.user.id);
+          setUserId(data.user._id);
         }
         
         setTimeout(() => {

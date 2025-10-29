@@ -22,7 +22,8 @@ export default function BookDetailPage({ bookId, onNavigate }) {
 
   const fetchBookDetails = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/books/${bookId}`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/books/${bookId}`);
+      console.log('Fetch book response status:', response.status); // DEBUG: Log status
       const data = await response.json();
       if (data.success) {
         setBook(data.book);
@@ -36,7 +37,8 @@ export default function BookDetailPage({ bookId, onNavigate }) {
 
   const fetchReviews = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/reviews/book/${bookId}`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/reviews/book/${bookId}`);
+      console.log('Fetch reviews response status:', response.status); // DEBUG: Log status
       const data = await response.json();
       if (data.success) {
         setReviews(data.reviews);
@@ -52,9 +54,10 @@ export default function BookDetailPage({ bookId, onNavigate }) {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/user-books/check/${bookId}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/user-books/check/${bookId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      console.log('Check library response status:', response.status); // DEBUG: Log status
       const data = await response.json();
       if (data.success) {
         setInLibrary(data.inLibrary);
@@ -73,7 +76,7 @@ export default function BookDetailPage({ bookId, onNavigate }) {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/api/user-books/add', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/user-books/add`, {
         method: 'POST',
         mode: 'cors', // FIXED: Ensure CORS
         headers: {
@@ -83,6 +86,7 @@ export default function BookDetailPage({ bookId, onNavigate }) {
         body: JSON.stringify({ bookId: bookId.toString(), status: 'want-to-read' }) // FIXED: Ensure bookId string
       });
 
+      console.log('Add to library response status:', response.status); // DEBUG: Log status
       const data = await response.json();
       console.log('Add to library response:', data); // DEBUG: Log full response
       if (data.success) {
@@ -112,7 +116,7 @@ export default function BookDetailPage({ bookId, onNavigate }) {
 
     setSubmitting(true);
     try {
-      const response = await fetch('http://localhost:5000/api/reviews/add', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/reviews/add`, {
         method: 'POST',
         mode: 'cors', // FIXED: Ensure CORS
         headers: {
@@ -126,6 +130,7 @@ export default function BookDetailPage({ bookId, onNavigate }) {
         })
       });
 
+      console.log('Submit review response status:', response.status); // DEBUG: Log status
       const data = await response.json();
       console.log('Submit review response:', data); // DEBUG: Log full response
       if (data.success) {
@@ -152,12 +157,13 @@ export default function BookDetailPage({ bookId, onNavigate }) {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/reviews/${reviewId}/like`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/reviews/${reviewId}/like`, {
         method: 'POST',
         mode: 'cors',
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
+      console.log('Like review response status:', response.status); // DEBUG: Log status
       const data = await response.json();
       if (data.success) {
         fetchReviews(); // Refresh reviews

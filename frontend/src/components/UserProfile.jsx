@@ -27,6 +27,7 @@ export default function UserProfile({ onNavigate, userId }) {
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
+  // Load user from localStorage and fetch reviews
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
@@ -40,26 +41,28 @@ export default function UserProfile({ onNavigate, userId }) {
         profilePicture: userData.profilePicture || '',
         headerImage: userData.headerImage || ''
       });
+
+      fetchUserReviews(token);
     } else {
-      // Redirect to login if no token
       onNavigate && onNavigate('login');
       return;
     }
+  }, [onNavigate]);
 
-    // Fetch user's reviews
-    fetchUserReviews(token);
-  }, []);
-
+  // Fetch user's reviews from backend
   const fetchUserReviews = async (token) => {
     setLoadingReviews(true);
     setReviewError('');
     try {
-      const response = await fetch('http://localhost:5000/api/reviews/user', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/reviews/user`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
+      console.log('Reviews fetch URL:', `${process.env.REACT_APP_API_URL}/api/reviews/user`);
+      console.log('Reviews response status:', response.status);
+      
       const data = await response.json();
       if (data.success) {
         setReviews(data.reviews || []);
@@ -74,11 +77,14 @@ export default function UserProfile({ onNavigate, userId }) {
     }
   };
 
+  // Premium success handler
   const handlePremiumSuccess = (updatedUser) => {
     setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
     setShowPremiumModal(false);
   };
 
+  // Compress image to reduce size
   const compressImage = (canvas, quality = 0.7) => {
     return new Promise((resolve, reject) => {
       try {
@@ -97,11 +103,15 @@ export default function UserProfile({ onNavigate, userId }) {
     });
   };
 
+  // Crop complete callback
   const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
+  // Save cropped image
   const handleCropSave = async () => {
+    if (!croppedAreaPixels || !tempImageSrc) return;
+
     try {
       const image = new Image();
       image.src = tempImageSrc;
@@ -148,6 +158,7 @@ export default function UserProfile({ onNavigate, userId }) {
     }
   };
 
+  // Cancel crop
   const handleCropCancel = () => {
     setIsCropping(false);
     setTempImageSrc('');
@@ -156,6 +167,7 @@ export default function UserProfile({ onNavigate, userId }) {
     setCroppedAreaPixels(null);
   };
 
+  // Handle profile picture select
   const handleProfilePictureSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -175,6 +187,7 @@ export default function UserProfile({ onNavigate, userId }) {
     setIsCropping(true);
   };
 
+  // Handle header image select
   const handleHeaderImageSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -194,6 +207,7 @@ export default function UserProfile({ onNavigate, userId }) {
     setIsCropping(true);
   };
 
+  // Save profile changes
   const handleSaveProfile = async () => {
     try {
       setLoading(true);
@@ -203,12 +217,13 @@ export default function UserProfile({ onNavigate, userId }) {
       
       if (!token) {
         alert('Please login again');
+        onNavigate && onNavigate('login');
         return;
       }
 
-      console.log('Sending profile update...');
+      console.log('Sending profile update to:', `${process.env.REACT_APP_API_URL}/api/user/profile`);
       
-      const response = await fetch('http://localhost:5000/api/user/profile', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/user/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -221,6 +236,7 @@ export default function UserProfile({ onNavigate, userId }) {
         })
       });
 
+      console.log('Profile update response status:', response.status);
       const data = await response.json();
       console.log('Server response:', data);
 
@@ -237,7 +253,7 @@ export default function UserProfile({ onNavigate, userId }) {
         window.location.reload();
       } else {
         setError(data.message || 'Failed to update profile');
-        alert('Error: ' + data.message);
+        alert('Error: ' + (data.message || 'Unknown error'));
       }
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -248,17 +264,20 @@ export default function UserProfile({ onNavigate, userId }) {
     }
   };
 
+  // Logout
   const handleLogout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     onNavigate && onNavigate('home');
   };
 
+  // Render star rating
   const renderStars = (rating) => {
+    const fullStars = Math.floor(rating || 0);
     return [...Array(5)].map((_, i) => (
       <Star
         key={i}
-        className={`w-5 h-5 ${i < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+        className={`w-5 h-5 ${i < fullStars ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
       />
     ));
   };
@@ -280,9 +299,11 @@ export default function UserProfile({ onNavigate, userId }) {
         onSuccess={handlePremiumSuccess}
       />
 
+      {/* Navigation */}
       <nav className="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
+            {/* Logo */}
             <div 
               className="flex items-center space-x-2 cursor-pointer" 
               onClick={() => onNavigate && onNavigate('home')}
@@ -293,6 +314,7 @@ export default function UserProfile({ onNavigate, userId }) {
               </span>
             </div>
             
+            {/* Desktop Nav Links */}
             <div className="hidden md:flex items-center space-x-8">
               <button 
                 onClick={() => onNavigate && onNavigate('home')}
@@ -300,11 +322,27 @@ export default function UserProfile({ onNavigate, userId }) {
               >
                 Home
               </button>
-              <a href="#" className="text-gray-700 hover:text-orange-500 transition">Browse</a>
-              <a href="#" className="text-gray-700 hover:text-orange-500 transition">Community</a>
-              <a href="#" className="text-gray-700 hover:text-orange-500 transition">My Books</a>
+              <button 
+                onClick={() => onNavigate && onNavigate('browse')}
+                className="text-gray-700 hover:text-orange-500 transition"
+              >
+                Browse
+              </button>
+              <button 
+                onClick={() => onNavigate && onNavigate('community')}
+                className="text-gray-700 hover:text-orange-500 transition"
+              >
+                Community
+              </button>
+              <button 
+                onClick={() => onNavigate && onNavigate('myBooks')}
+                className="text-gray-700 hover:text-orange-500 transition"
+              >
+                My Books
+              </button>
             </div>
 
+            {/* Desktop User Section */}
             <div className="hidden md:flex items-center space-x-4">
               {/* Premium Button */}
               {!user.isPremium ? (
@@ -322,6 +360,7 @@ export default function UserProfile({ onNavigate, userId }) {
                 </div>
               )}
 
+              {/* User Dropdown */}
               <div className="relative">
                 <button 
                   onClick={() => setShowDropdown(!showDropdown)}
@@ -335,10 +374,10 @@ export default function UserProfile({ onNavigate, userId }) {
                     />
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-pink-400 flex items-center justify-center text-white font-bold">
-                      {user?.fullname?.charAt(0).toUpperCase()}
+                      {user?.fullname?.charAt(0).toUpperCase() || 'U'}
                     </div>
                   )}
-                  <span className="font-semibold text-gray-700">@{user?.username}</span>
+                  <span className="font-semibold text-gray-700 hidden sm:inline">@{user?.username}</span>
                   <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
@@ -364,7 +403,7 @@ export default function UserProfile({ onNavigate, userId }) {
                         </div>
                         
                         <button
-                          onClick={() => setIsEditing(!isEditing)}
+                          onClick={() => { setShowDropdown(false); setIsEditing(!isEditing); }}
                           className="w-full px-4 py-3 text-left hover:bg-gray-50 transition flex items-center space-x-3"
                         >
                           <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -392,17 +431,19 @@ export default function UserProfile({ onNavigate, userId }) {
               </div>
             </div>
 
+            {/* Mobile Menu Toggle */}
             <button className="md:hidden" onClick={() => setMenuOpen(!menuOpen)}>
               {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
 
+        {/* Mobile Menu */}
         {menuOpen && (
           <div className="md:hidden bg-white border-t">
             <div className="px-4 py-3 space-y-3">
               <button 
-                onClick={() => onNavigate && onNavigate('home')}
+                onClick={() => { onNavigate && onNavigate('home'); setMenuOpen(false); }}
                 className="block w-full text-left text-gray-700 hover:text-orange-500"
               >
                 Home
@@ -410,20 +451,20 @@ export default function UserProfile({ onNavigate, userId }) {
               {!user.isPremium && (
                 <button 
                   className="w-full px-4 py-2 bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 text-white rounded-full font-bold flex items-center justify-center space-x-2"
-                  onClick={() => setShowPremiumModal(true)}
+                  onClick={() => { setShowPremiumModal(true); setMenuOpen(false); }}
                 >
                   <Crown className="w-4 h-4" />
                   <span>Upgrade to Premium</span>
                 </button>
               )}
               <button 
-                onClick={() => setIsEditing(!isEditing)}
+                onClick={() => { setIsEditing(!isEditing); setMenuOpen(false); }}
                 className="block w-full text-left text-gray-700 hover:text-orange-500"
               >
                 {isEditing ? 'Cancel Edit' : 'Edit Profile'}
               </button>
               <button 
-                onClick={handleLogout}
+                onClick={() => { handleLogout(); setMenuOpen(false); }}
                 className="w-full px-4 py-2 text-red-600 border border-red-300 rounded-full"
               >
                 Logout
@@ -433,14 +474,16 @@ export default function UserProfile({ onNavigate, userId }) {
         )}
       </nav>
 
+      {/* Profile Content */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header Image */}
         <div className="relative h-64 rounded-t-3xl overflow-hidden bg-gray-100">
           {profileData.headerImage ? (
             <img src={profileData.headerImage} alt="Header" className="w-full h-full object-cover" />
           ) : user?.headerImage ? (
             <img src={user.headerImage} alt="Header" className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-100 to-purple-100">
               <Book className="w-20 h-20 text-gray-300" />
             </div>
           )}
@@ -466,7 +509,9 @@ export default function UserProfile({ onNavigate, userId }) {
           )}
         </div>
 
+        {/* Profile Card */}
         <div className="bg-white rounded-b-3xl shadow-xl p-8 -mt-16 relative">
+          {/* Profile Picture */}
           <div className="relative -mt-20 mb-4">
             <div className="w-32 h-32 rounded-full border-4 border-white shadow-xl overflow-hidden bg-gray-200 mx-auto">
               {profileData.profilePicture ? (
@@ -476,7 +521,7 @@ export default function UserProfile({ onNavigate, userId }) {
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-400 to-pink-400">
                   <span className="text-4xl font-bold text-white">
-                    {user?.fullname?.charAt(0).toUpperCase()}
+                    {user?.fullname?.charAt(0).toUpperCase() || 'U'}
                   </span>
                 </div>
               )}
@@ -495,6 +540,7 @@ export default function UserProfile({ onNavigate, userId }) {
             )}
           </div>
 
+          {/* User Info */}
           <div className="text-center mb-6">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">{user?.fullname}</h1>
             <p className="text-gray-600 mb-1">@{user?.username}</p>
@@ -513,6 +559,7 @@ export default function UserProfile({ onNavigate, userId }) {
             </div>
           </div>
 
+          {/* Bio */}
           <div className="mb-8">
             <h3 className="text-lg font-bold text-gray-900 mb-3">Bio</h3>
             {isEditing ? (
@@ -530,6 +577,7 @@ export default function UserProfile({ onNavigate, userId }) {
             )}
           </div>
 
+          {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mb-8">
             <div className="bg-gradient-to-br from-orange-50 to-pink-50 rounded-2xl p-4 text-center">
               <p className="text-3xl font-bold text-orange-600">{reviews.length}</p>
@@ -545,12 +593,14 @@ export default function UserProfile({ onNavigate, userId }) {
             </div>
           </div>
 
+          {/* Error Message */}
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
               {error}
             </div>
           )}
 
+          {/* Save Button */}
           {isEditing && (
             <button
               onClick={handleSaveProfile}
@@ -562,6 +612,7 @@ export default function UserProfile({ onNavigate, userId }) {
           )}
         </div>
 
+        {/* Reviews Section */}
         <div className="mt-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">My Book Reviews</h2>
           
@@ -614,13 +665,14 @@ export default function UserProfile({ onNavigate, userId }) {
         </div>
       </div>
 
+      {/* Crop Modal */}
       {isCropping && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-4 rounded-xl max-w-lg w-full">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-xl max-w-lg w-full">
             <h3 className="text-lg font-bold mb-4">
               Crop {cropType === 'profile' ? 'Profile Picture' : 'Header Image'}
             </h3>
-            <div className="relative w-full h-64">
+            <div className="relative w-full h-64 mb-4">
               <Cropper
                 image={tempImageSrc}
                 crop={crop}
@@ -631,8 +683,8 @@ export default function UserProfile({ onNavigate, userId }) {
                 onCropComplete={onCropComplete}
               />
             </div>
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700">Zoom</label>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Zoom</label>
               <input
                 type="range"
                 min={1}
@@ -640,19 +692,19 @@ export default function UserProfile({ onNavigate, userId }) {
                 step={0.1}
                 value={zoom}
                 onChange={(e) => setZoom(parseFloat(e.target.value))}
-                className="w-full"
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
               />
             </div>
-            <div className="mt-4 flex justify-end space-x-2">
+            <div className="flex justify-end space-x-2">
               <button
                 onClick={handleCropCancel}
-                className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
+                className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCropSave}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
               >
                 Save Crop
               </button>

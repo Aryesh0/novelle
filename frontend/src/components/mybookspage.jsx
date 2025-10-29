@@ -28,11 +28,12 @@ export default function MyBooksPage({ onNavigate }) {
     try {
       const statusParam = activeTab === 'all' ? '' : `?status=${activeTab}`;
       const response = await fetch(
-        `http://localhost:5000/api/user-books/library${statusParam}`,
+        `${process.env.REACT_APP_API_URL}/api/user-books/library${statusParam}`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
       );
+      console.log('Fetch user books response status:', response.status); // DEBUG: Log status
       const data = await response.json();
       if (data.success) {
         setBooks(data.books);
@@ -49,7 +50,7 @@ export default function MyBooksPage({ onNavigate }) {
     
     try {
       const response = await fetch(
-        `http://localhost:5000/api/user-books/${bookId}/status`,
+        `${process.env.REACT_APP_API_URL}/api/user-books/${bookId}/status`,
         {
           method: 'PUT',
           headers: {
@@ -59,7 +60,7 @@ export default function MyBooksPage({ onNavigate }) {
           body: JSON.stringify({ status: newStatus })
         }
       );
-      
+      console.log('Update status response status:', response.status); // DEBUG: Log status
       const data = await response.json();
       if (data.success) {
         fetchUserBooks();
@@ -76,13 +77,13 @@ export default function MyBooksPage({ onNavigate }) {
     
     try {
       const response = await fetch(
-        `http://localhost:5000/api/user-books/${bookId}`,
+        `${process.env.REACT_APP_API_URL}/api/user-books/${bookId}`,
         {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}` }
         }
       );
-      
+      console.log('Remove book response status:', response.status); // DEBUG: Log status
       const data = await response.json();
       if (data.success) {
         fetchUserBooks();
