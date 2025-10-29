@@ -59,7 +59,7 @@ export default function PremiumModal({ isOpen, onClose, onSuccess }) {
       }
 
       // Create order
-      const orderResponse = await fetch('https://novelle-gyeamg83z-aryeshs-projects-7881d6ee.vercel.app/api/payment/create-order', {
+      const orderResponse = await fetch('https://novelle-dmmhwgara-aryeshs-projects-7881d6ee.vercel.app//api/payment/create-order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
